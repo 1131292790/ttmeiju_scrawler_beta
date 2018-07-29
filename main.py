@@ -18,8 +18,8 @@ def write_to_file(name,content):
 	with open(name+'.txt','w',encoding='utf-8') as n:
 		n.write(content)
 
-def parse_one_page():
-	css_selects = bs.select("#seedlist .Scontent1, .Scontent")
+def parse_one_page(target):
+	css_selects = target.select("#seedlist .Scontent1, .Scontent")
 	#pattern = re.compile('<input.*?>',re.S)
 	#for per_selected in css_selects:
 	for per_selected in css_selects:
@@ -34,31 +34,48 @@ def parse_one_page():
 		information = per_selected.find_all(name='td')[4:6]
 		password = information[0].get_text()
 		size = information[1].get_text()
-		if password:
-			#execute function to enter netdisk page and store data
-			print(name)
-			print('password found,we pass')
-		else:
-			#get password
-			print(name)
-			headers['Referer']='http://www.ttmeiju.vip/summary.html'
-			rq = requests.get(addr,headers=headers)
-			seedbs = BeautifulSoup(rq.text,'lxml')
-			per_password = seedbs.select('.newstxt p')[2].get_text().strip()
-			print(per_password)
+		check_baidu_addr_exist(baidu_addr,password,name,addr)
 
 #how many you want to scrawl
 def change_page(page):
 	headers['Referer']='http://www.ttmeiju.vip/meiju/Movie.html'
-	
-	rq = requests.get('http://www.ttmeiju.vip/index.php/meiju/index/engename/Movie/p/'+
-		str(page)+'.html',headers=headers)
-	write_to_file('page'+str(page),rq.text)
-	parse_one_page()
+	rq = requests.get('http://www.ttmeiju.vip/index.php/meiju/index/engename/Movie/p/'
+		+str(page)+'.html',headers=headers)
+	filename = 'page'+str(page)
+	write_to_file(filename,rq.text)
+	bs2 = BeautifulSoup(open(filename+'.txt'),'lxml')
+	parse_one_page(bs2)
 
-def main():
+def check_baidu_addr_exist(content,password,name,addr):
+	result = re.match('^https://pan.baidu.com/s.*',content,re.S)
+	if result:
+		#print('We"v got a baidu_netdisk address.')
+		print(result.group())
+		check_password(password,name,addr)
+	else:
+		pass
+
+def check_password(password,name,addr):
+	if password:
+		#execute function to enter netdisk page and store data
+		print(name+" FOUND")
+		#print('password found,we pass')
+	else:
+		#get password
+		print(name+" getting")
+		headers['Referer']='http://www.ttmeiju.vip/summary.html'
+		rq = requests.get(addr,headers=headers)
+		seedbs = BeautifulSoup(rq.text,'lxml')
+		print(seedbs)
+		per_password = seedbs.select('.newstxt p')[2].get_text().strip() #
+		print(per_password)
+
+def main(page):
 	rq = requests.get('http://www.ttmeiju.vip/meiju/Movie.html',headers=headers)
 	write_to_file('home_page',rq.text)
 	bs = BeautifulSoup(open('home_page.txt'),'lxml')
 	bs.prettify()
-	parse_one_page()
+	parse_one_page(bs)
+	change_page(page)
+
+change_page(3)
